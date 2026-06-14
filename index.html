@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vowel Compare — subí dos palabras y mirá la diferencia</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d1b2a;--surf:#152236;--surf2:#1a2a40;--brd:#243655;--txt:#e2e8f0;--txt2:#64748b;--txt3:#94a3b8;
+  --a:#60a5fa;--b:#fb923c;--green:#34d399;--gold:#fbbf24;--violet:#818cf8;--red:#f87171;--mono:ui-monospace,Menlo,Consolas,monospace;}
+body{font-family:ui-sans-serif,system-ui,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;padding:16px;font-size:14px;max-width:860px;margin:0 auto}
+h1{font-size:17px;font-weight:700}
+.sub{font-size:11px;color:var(--txt2);margin:4px 0 14px;line-height:1.5}
+button{font-family:inherit;cursor:pointer}
+.cards{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.card{flex:1 1 280px;background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:14px}
+.card.A{border-top:3px solid var(--a)}.card.B{border-top:3px solid var(--b)}
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.word{font-size:18px;font-weight:800;outline:none;border-bottom:1px dashed transparent}
+.word:focus{border-bottom-color:var(--brd)}
+.det{font-size:10px;font-family:var(--mono);color:var(--txt2)}
+.drop{border:1.5px dashed var(--brd);border-radius:10px;padding:14px;text-align:center;font-size:12px;color:var(--txt2);cursor:pointer;transition:.15s}
+.drop:hover{border-color:var(--violet);color:var(--txt3)}
+.drop input{display:none}
+.wave-wrap{margin:10px 0 8px;height:56px;background:#0a1525;border-radius:8px;border:1px solid var(--brd);overflow:hidden}
+.wave-wrap canvas{width:100%;height:100%;display:block}
+.row{display:flex;gap:6px}
+.mini-btn{flex:1;padding:7px;border-radius:8px;border:1px solid var(--brd);background:transparent;color:var(--txt2);font-size:11px}
+.mini-btn:disabled{opacity:.4}
+.analysis{display:none}.analysis.show{display:block}
+.verdict{padding:14px 16px;border-radius:12px;font-size:15px;font-weight:700;margin-bottom:14px;display:flex;gap:10px;align-items:center}
+.panel{background:var(--surf);border:1px solid var(--brd);border-radius:14px;padding:14px;margin-bottom:14px}
+.panel h3{font-size:12px;color:var(--txt3);margin-bottom:8px}
+.panel p.hint{font-size:11px;color:var(--txt2);margin:-4px 0 10px;line-height:1.5}
+.factors{display:flex;flex-direction:column;gap:10px}
+.factor{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center}
+.factor-label{font-size:11px;color:var(--txt3)}
+.factor-bar{position:relative;height:24px;background:var(--surf2);border-radius:6px;border:1px solid var(--brd)}
+.fa,.fb{position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;border:2px solid #0d1b2a;font-size:0}
+.fa{background:var(--a)}.fb{background:var(--b)}
+.factor-ends{display:flex;justify-content:space-between;font-size:9px;color:var(--txt2);padding:0 4px;margin-top:2px}
+.views{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.views{grid-template-columns:1fr}}
+svg{display:block;width:100%}
+.spec-canvas{width:100%;height:120px;display:block;border-radius:8px;border:1px solid var(--brd);background:#000}
+.spec-lab{font-size:11px;font-weight:700;margin:10px 0 4px;display:flex;gap:6px;align-items:center}
+.sw{width:10px;height:10px;border-radius:50%}
+.legend{display:flex;gap:14px;font-size:10px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.legend span{display:flex;gap:5px;align-items:center;color:var(--txt3)}
+.dot{width:10px;height:3px;border-radius:2px}
+.slider{width:100%;height:28px;-webkit-appearance:none;background:transparent;cursor:pointer;margin-top:6px}
+.slider::-webkit-slider-runnable-track{height:8px;border-radius:5px;background:linear-gradient(90deg,var(--a),var(--b))}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--violet);margin-top:-6px}
+.slider::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--violet)}
+.drone-btn{width:100%;padding:8px;border-radius:9px;border:1px solid var(--brd);background:var(--surf2);color:var(--txt);font-size:12px;font-weight:600;margin-top:6px}
+.drone-btn.on{border-color:var(--green);background:#34d39918;color:var(--green)}
+.note{font-size:11px;color:var(--txt3);background:var(--surf2);border:1px solid var(--brd);border-radius:9px;padding:11px;line-height:1.55;margin-bottom:12px}
+.note b{color:var(--txt)}
+</style>
+</head>
+<body>
+<h1>Vowel Compare</h1>
+<p class="sub">Subí dos audios de palabras (del libro, por ejemplo) que difieran en una sola vocal. Encuentro la vocal dentro de cada palabra y te muestro — de varias formas — en qué se diferencian, aunque tu oído todavía no las distinga. Como son grabaciones correctas, no hay error tuyo en juego.</p>
+
+<div class="cards">
+  <div class="card A">
+    <div class="card-top"><span class="word" id="wordA" contenteditable>palabra A</span><span class="det" id="detA">—</span></div>
+    <label class="drop">📁 Subí o soltá el audio A<input type="file" accept="audio/*" onchange="loadFile('A',this.files[0])"></label>
+    <div class="wave-wrap"><canvas id="waveA"></canvas></div>
+    <div class="row"><button class="mini-btn" id="pwA" onclick="playWord('A')" disabled>▶ palabra</button><button class="mini-btn" id="pvA" onclick="playVowelSlice('A')" disabled>▶ solo vocal</button><button class="mini-btn" id="piA" onclick="playIdeal('A')" disabled>▶ ideal</button></div>
+  </div>
+  <div class="card B">
+    <div class="card-top"><span class="word" id="wordB" contenteditable>palabra B</span><span class="det" id="detB">—</span></div>
+    <label class="drop">📁 Subí o soltá el audio B<input type="file" accept="audio/*" onchange="loadFile('B',this.files[0])"></label>
+    <div class="wave-wrap"><canvas id="waveB"></canvas></div>
+    <div class="row"><button class="mini-btn" id="pwB" onclick="playWord('B')" disabled>▶ palabra</button><button class="mini-btn" id="pvB" onclick="playVowelSlice('B')" disabled>▶ solo vocal</button><button class="mini-btn" id="piB" onclick="playIdeal('B')" disabled>▶ ideal</button></div>
+  </div>
+</div>
+
+<div class="note" id="initNote"><b>Tip:</b> sirven mp3, wav, m4a, ogg. Lo ideal es un audio corto de una sola palabra. La franja verde sobre la onda marca la vocal que detecté; oíla con <b>"▶ solo vocal"</b> para confirmar que aislé bien el sonido.</div>
+
+<div class="analysis" id="analysis">
+  <div class="verdict" id="verdict"></div>
+
+  <div class="panel">
+    <h3>Factor por factor</h3>
+    <p class="hint">Dónde cae cada vocal en cada dimensión articulatoria. Si los dos puntos están juntos, esa dimensión no las diferencia; si están lejos, ahí está la diferencia.</p>
+    <div class="factors" id="factors"></div>
+  </div>
+
+  <div class="views">
+    <div class="panel" style="margin:0">
+      <h3>¿Dónde está la lengua y los labios?</h3>
+      <p class="hint">El bulto es la lengua (perfil mirando a la izquierda). Azul=A, naranja=B.</p>
+      <svg id="mouth" viewBox="0 0 300 250"></svg>
+    </div>
+    <div class="panel" style="margin:0">
+      <h3>Huella sonora (envolvente)</h3>
+      <p class="hint">Las jorobas son los formantes de cada vocal.</p>
+      <svg id="env" viewBox="0 0 320 250"></svg>
+      <div class="legend"><span><span class="dot" style="background:var(--a)"></span><span id="legA">A</span></span><span><span class="dot" style="background:var(--b)"></span><span id="legB">B</span></span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Movimiento del formante F2 en el tiempo (¿es diptongo?)</h3>
+    <p class="hint">Si la línea sube o baja mucho, la vocal "se mueve" (diptonga). Si es plana, es pura.</p>
+    <svg id="traj" viewBox="0 0 640 180"></svg>
+  </div>
+
+  <div class="panel">
+    <h3>Transformá una vocal en la otra (desde tus audios)</h3>
+    <p class="hint">Con los formantes que extraje de tus grabaciones. Activá el tono y arrastrá para oír el continuo.</p>
+    <input type="range" min="0" max="100" value="0" class="slider" id="morph" oninput="onMorph()">
+    <button class="drone-btn" id="droneBtn" onclick="toggleDrone()">🔊 Tono continuo — arrastrá y escuchá</button>
+    <div style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--txt3);margin-top:6px" id="morphRead">F1 — · F2 —</div>
+  </div>
+
+  <div class="panel">
+    <h3>Espectrogramas (vocal marcada en verde)</h3>
+    <div class="spec-lab"><span class="sw" style="background:var(--a)"></span><span id="slA">A</span></div>
+    <canvas id="specA" class="spec-canvas"></canvas>
+    <div class="spec-lab"><span class="sw" style="background:var(--b)"></span><span id="slB">B</span></div>
+    <canvas id="specB" class="spec-canvas"></canvas>
+  </div>
+</div>
+
+<script>
+// ════ FFT ════
+function fft(re,im){const n=re.length;for(let i=1,j=0;i<n;i++){let bit=n>>1;for(;j&bit;bit>>=1)j^=bit;j^=bit;if(i<j){let t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}}
+  for(let len=2;len<=n;len<<=1){const ang=-2*Math.PI/len,wr=Math.cos(ang),wi=Math.sin(ang);for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<(len>>1);k++){const a=i+k,b=a+(len>>1);const xr=re[b]*cr-im[b]*ci,xi=re[b]*ci+im[b]*cr;re[b]=re[a]-xr;im[b]=im[a]-xi;re[a]+=xr;im[a]+=xi;const ncr=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=ncr;}}}}
+// ════ LPC ════
+function levinson(R,order){const a=new Float64Array(order+1);a[0]=1;let err=R[0];if(err<=0)return null;
+  for(let i=1;i<=order;i++){let acc=R[i];for(let j=1;j<i;j++)acc+=a[j]*R[i-j];const k=-acc/err,p=a.slice();for(let j=1;j<i;j++)a[j]=p[j]+k*p[i-j];a[i]=k;err*=(1-k*k);if(err<=0)break;}return a;}
+function cmul(a,b){return{re:a.re*b.re-a.im*b.im,im:a.re*b.im+a.im*b.re};}
+function cdiv(a,b){const d=b.re*b.re+b.im*b.im;return{re:(a.re*b.re+a.im*b.im)/d,im:(a.im*b.re-a.re*b.im)/d};}
+function csub(a,b){return{re:a.re-b.re,im:a.im-b.im};}function cabs(a){return Math.hypot(a.re,a.im);}
+function polyRoots(c){c=c.slice();while(c.length>1&&Math.abs(c[c.length-1])<1e-9)c.pop();const n=c.length-1;if(n<1)return[];
+  const lead=c[n],mon=c.map(v=>v/lead),d=mon.slice().reverse();
+  const ev=w=>{let v={re:d[0],im:0};for(let k=1;k<=n;k++)v={re:v.re*w.re-v.im*w.im+d[k],im:v.re*w.im+v.im*w.re};return v;};
+  let z=[],p={re:1,im:0};const sd={re:0.4,im:0.9};for(let i=0;i<n;i++){z.push({re:p.re,im:p.im});p=cmul(p,sd);}
+  for(let it=0;it<60;it++){let md=0;for(let i=0;i<n;i++){const nu=ev(z[i]);let de={re:1,im:0};for(let j=0;j<n;j++)if(j!==i)de=cmul(de,csub(z[i],z[j]));const dl=cdiv(nu,de);z[i]=csub(z[i],dl);md=Math.max(md,cabs(dl));}if(md<1e-9)break;}return z;}
+function formants(frame,fsN){const factor=Math.max(1,Math.round(fsN/11000)),fs=fsN/factor,L=2*factor,dn=Math.floor((frame.length-L)/factor);
+  if(dn<48)return null;const ds=new Float64Array(dn);
+  for(let i=0;i<dn;i++){let s=0,w=0;for(let j=0;j<L;j++){const wj=0.5-0.5*Math.cos(2*Math.PI*j/(L-1));s+=frame[i*factor+j]*wj;w+=wj;}ds[i]=s/w;}
+  for(let i=dn-1;i>0;i--)ds[i]-=0.97*ds[i-1];for(let i=0;i<dn;i++)ds[i]*=0.54-0.46*Math.cos(2*Math.PI*i/(dn-1));
+  const order=Math.round(fs/1000)+2,R=new Float64Array(order+1);for(let l=0;l<=order;l++){let s=0;for(let i=l;i<dn;i++)s+=ds[i]*ds[i-l];R[l]=s;}
+  if(R[0]===0)return null;R[0]*=1.0001;const a=levinson(R,order);if(!a)return null;
+  const rts=polyRoots(Array.from(a)),fm=[];rts.forEach(w=>{if(cabs(w)<1e-6)return;const zr=cdiv({re:1,im:0},w),an=Math.atan2(zr.im,zr.re);if(an<=0.0001)return;
+    const fr=an*fs/(2*Math.PI),bw=-Math.log(Math.min(cabs(zr),0.99999))*fs/Math.PI;if(fr>90&&fr<fs/2-150&&bw<500)fm.push(fr);});
+  fm.sort((x,y)=>x-y);const F=[];for(const f of fm){if(F.length===0&&f>=200&&f<=1300)F.push(f);else if(F.length===1&&f>F[0]+180&&f<=3000)F.push(f);else if(F.length===2&&f>F[1]+250&&f<=4000)F.push(f);if(F.length===3)break;}
+  return F.length>=2?{f1:F[0],f2:F[1],f3:F[2]||null}:null;}
+// ════ envolvente analítica ════
+function envelope(F){const NP=160,fmax=5000,bw=[70,100,130,180],F4=3400,all=[F[0],F[1],F[2]||2600,F4],fr=[],db=[];
+  for(let n=0;n<NP;n++){const f=Math.max(1,fmax*n/(NP-1));let H=1;for(let k=0;k<all.length;k++)H*=(all[k]*all[k])/Math.sqrt(Math.pow(all[k]*all[k]-f*f,2)+Math.pow(bw[k]*f,2));if(f>500)H*=Math.sqrt(500/f);fr.push(f);db.push(20*Math.log10(H+1e-9));}
+  const mx=Math.max(...db);for(let n=0;n<NP;n++)db[n]-=mx;return{freqs:fr,db};}
+function bark(f){return 13*Math.atan(0.00076*f)+3.5*Math.atan(Math.pow(f/7500,2));}
+function median(a){const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length?(s.length%2?s[m]:(s[m-1]+s[m])/2):0;}
+
+// ════ análisis de palabra → vocal ════
+function analyzeWord(samples,fs){
+  const N=1024,hop=256;const hann=new Float32Array(N);for(let i=0;i<N;i++)hann[i]=0.5-0.5*Math.cos(2*Math.PI*i/(N-1));
+  const vn=[],idx=[];
+  for(let st=0;st+N<=samples.length;st+=hop){
+    let e=0,zc=0;for(let i=0;i<N;i++){e+=samples[st+i]*samples[st+i];if(i>0&&(samples[st+i-1]<0)!==(samples[st+i]<0))zc++;}
+    e=Math.sqrt(e/N);const zcr=zc/N;
+    const re=new Float64Array(N),im=new Float64Array(N);for(let i=0;i<N;i++)re[i]=samples[st+i]*hann[i];fft(re,im);
+    let low=0,tot=0;for(let b=1;b<N/2;b++){const f=b*fs/N,m=re[b]*re[b]+im[b]*im[b];tot+=m;if(f>=150&&f<=1300)low+=m;}
+    const lowR=tot>0?low/tot:0;
+    vn.push(e*lowR*(zcr<0.18?1:0.3));idx.push(st);
+  }
+  if(!vn.length)return null;
+  // suavizar
+  const sm=vn.map((_,i)=>{let s=0,c=0;for(let k=-2;k<=2;k++){const j=i+k;if(j>=0&&j<vn.length){s+=vn[j];c++;}}return s/c;});
+  let mxi=0;for(let i=0;i<sm.length;i++)if(sm[i]>sm[mxi])mxi=i;
+  const thr=sm[mxi]*0.45;let lo=mxi,hi=mxi;while(lo>0&&sm[lo-1]>thr)lo--;while(hi<sm.length-1&&sm[hi+1]>thr)hi++;
+  const vStart=idx[lo],vEnd=idx[hi]+N,center=idx[mxi]+N/2;
+  // formantes representativos (mediana sobre la zona estable)
+  const F1s=[],F2s=[],F3s=[],traj=[];
+  for(let i=lo;i<=hi;i++){const st=idx[i];if(st+2048>samples.length)continue;const fo=formants(samples.subarray(st,st+2048),fs);
+    if(fo){F1s.push(fo.f1);F2s.push(fo.f2);if(fo.f3)F3s.push(fo.f3);traj.push({t:(st+1024)/fs,f1:fo.f1,f2:fo.f2});}}
+  if(F1s.length<1)return null;
+  return {f1:median(F1s),f2:median(F2s),f3:F3s.length?median(F3s):null,
+    vStart,vEnd,center,dur:(vEnd-vStart)/fs,traj,samples,fs};
+}
+
+// ════ estado ════
+const D={A:null,B:null};let actx=null;
+function ctx(){if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();return actx;}
+
+async function loadFile(slot,file){if(!file)return;
+  const buf=await file.arrayBuffer();const ab=await ctx().decodeAudioData(buf.slice(0));
+  let s=ab.getChannelData(0);if(ab.numberOfChannels>1){const s2=ab.getChannelData(1);const mix=new Float32Array(s.length);for(let i=0;i<s.length;i++)mix[i]=(s[i]+s2[i])/2;s=mix;}
+  // recortar a 3 s max y normalizar
+  if(s.length>ab.sampleRate*3)s=s.subarray(0,Math.floor(ab.sampleRate*3));
+  let mx=1e-6;for(let i=0;i<s.length;i++)mx=Math.max(mx,Math.abs(s[i]));const norm=new Float32Array(s.length);for(let i=0;i<s.length;i++)norm[i]=s[i]/mx*0.95;
+  const an=analyzeWord(norm,ab.sampleRate);
+  if(!an){document.getElementById('det'+slot).textContent='no detecté vocal';return;}
+  D[slot]={...an,sampleRate:ab.sampleRate,samples:norm};
+  document.getElementById('det'+slot).textContent=`F1 ${Math.round(an.f1)} · F2 ${Math.round(an.f2)} · ${Math.round(an.dur*1000)}ms`;
+  ['pw','pv','pi'].forEach(p=>document.getElementById(p+slot).disabled=false);
+  drawWave(slot);
+  if(D.A&&D.B)runCompare();
+}
+
+function drawWave(slot){const cv=document.getElementById('wave'+slot),d=D[slot],s=d.samples;
+  const dpr=window.devicePixelRatio||1,W=cv.clientWidth||300,H=56;cv.width=W*dpr;cv.height=H*dpr;const c=cv.getContext('2d');c.scale(dpr,dpr);c.clearRect(0,0,W,H);
+  // vocal marcada
+  c.fillStyle='rgba(52,211,153,0.14)';c.fillRect(d.vStart/s.length*W,0,(d.vEnd-d.vStart)/s.length*W,H);
+  c.strokeStyle=slot==='A'?'#60a5fa':'#fb923c';c.lineWidth=1;c.beginPath();const step=s.length/W;
+  for(let x=0;x<W;x++){let mn=1,mx=-1;const a=Math.floor(x*step),b=Math.floor((x+1)*step);for(let i=a;i<b;i++){if(s[i]<mn)mn=s[i];if(s[i]>mx)mx=s[i];}c.moveTo(x,H/2-mx*H/2*0.95);c.lineTo(x,H/2-mn*H/2*0.95);}c.stroke();}
+
+// ════ reproducción ════
+function buf(samples,fs){const b=ctx().createBuffer(1,samples.length,fs);b.getChannelData(0).set(samples);return b;}
+function play(samples,fs){const s=ctx().createBufferSource();s.buffer=buf(samples,fs);s.connect(ctx().destination);s.start();}
+function playWord(slot){const d=D[slot];play(d.samples,d.sampleRate);}
+function playVowelSlice(slot){const d=D[slot];const sl=d.samples.subarray(d.vStart,d.vEnd);
+  // pequeño fade para evitar clicks
+  const out=new Float32Array(sl.length);out.set(sl);const f=Math.min(400,out.length>>2);for(let i=0;i<f;i++){out[i]*=i/f;out[out.length-1-i]*=i/f;}play(out,d.sampleRate);}
+function playFormants(F,fs0){const c=ctx(),now=c.currentTime,dur=0.6,f0=130;
+  const osc=c.createOscillator();osc.type='sawtooth';osc.frequency.setValueAtTime(f0,now);osc.frequency.linearRampToValueAtTime(f0*0.95,now+dur);
+  const g=c.createGain();g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.3,now+0.04);g.gain.setValueAtTime(0.3,now+dur-0.1);g.gain.linearRampToValueAtTime(0,now+dur);
+  const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5200;
+  [[F[0],80,1],[F[1],100,0.85],[F[2]||2600,150,0.5]].forEach(([fr,bw,gn])=>{const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=fr;bp.Q.value=fr/bw;const gg=c.createGain();gg.gain.value=gn;osc.connect(bp);bp.connect(gg);gg.connect(lp);});
+  lp.connect(g);g.connect(c.destination);osc.start(now);osc.stop(now+dur);}
+function playIdeal(slot){const d=D[slot];playFormants([d.f1,d.f2,d.f3]);}
+
+// ════ morph drone ════
+let drone=null;
+function curF(){const t=+document.getElementById('morph').value/100;return [D.A.f1+(D.B.f1-D.A.f1)*t,D.A.f2+(D.B.f2-D.A.f2)*t,(D.A.f3||2600)+((D.B.f3||2600)-(D.A.f3||2600))*t];}
+function toggleDrone(){const btn=document.getElementById('droneBtn');
+  if(drone){drone.osc.stop();drone=null;btn.classList.remove('on');btn.textContent='🔊 Tono continuo — arrastrá y escuchá';return;}
+  const c=ctx(),now=c.currentTime,F=curF();const osc=c.createOscillator();osc.type='sawtooth';osc.frequency.value=130;
+  const g=c.createGain();g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.27,now+0.06);const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=5200;
+  const fl=[[F[0],80],[F[1],100],[F[2],150]].map(([fr,bw],i)=>{const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=fr;bp.Q.value=fr/bw;const gg=c.createGain();gg.gain.value=[1,0.85,0.5][i];osc.connect(bp);bp.connect(gg);gg.connect(lp);return bp;});
+  lp.connect(g);g.connect(c.destination);osc.start(now);drone={osc,fl};btn.classList.add('on');btn.textContent='⏹ Detener tono';}
+function onMorph(){const F=curF();document.getElementById('morphRead').textContent=`F1 ${Math.round(F[0])} · F2 ${Math.round(F[1])} Hz`;
+  if(drone){const t=ctx().currentTime;drone.fl.forEach((bp,i)=>bp.frequency.setTargetAtTime(F[i],t,0.04));}drawMouth();drawEnv();}
+
+// ════ diagrama boca ════
+function mouthRange(){const f1=[D.A.f1,D.B.f1].map(bark),f2=[D.A.f2,D.B.f2].map(bark);
+  return{b1min:Math.min(...f1)-0.8,b1max:Math.max(...f1)+0.8,b2min:Math.min(...f2)-1,b2max:Math.max(...f2)+1};}
+function tonguePos(F1,F2){const R=mouthRange();const hN=clamp((bark(F1)-R.b1min)/(R.b1max-R.b1min),0,1),fN=clamp((bark(F2)-R.b2min)/(R.b2max-R.b2min),0,1);
+  return {tx:95+(1-fN)*110,ty:95+hN*70};}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function tonguePath(tx,ty){const cx=2*tx-160,cy=2*ty-200;return `M 95 200 Q ${cx} ${cy} 225 200 L 225 215 L 95 215 Z`;}
+function roundIdx(d){if(!d.f3)return 0;return clamp((1-(d.f2-800)/1600)*0.5+(1-(d.f3-2300)/700)*0.5,0,1);}
+function drawMouth(){let s=`<path d="M 70 60 Q 150 30 245 70 Q 270 120 250 190 L 250 235 L 60 235 L 60 130 Q 55 90 70 60 Z" fill="#0a1525" stroke="#243655" stroke-width="1.5"/>`;
+  s+=`<path d="M 90 95 Q 160 70 230 100" fill="none" stroke="#34507a" stroke-width="2"/>`;
+  s+=`<text x="150" y="50" text-anchor="middle" font-size="9" fill="#64748b">lengua ALTA</text><text x="150" y="232" text-anchor="middle" font-size="9" fill="#64748b">lengua BAJA</text>`;
+  s+=`<text x="64" y="128" font-size="9" fill="#64748b" transform="rotate(-90 64 128)">adelante</text><text x="252" y="150" font-size="9" fill="#64748b" transform="rotate(90 252 150)">atrás</text>`;
+  const pA=tonguePos(D.A.f1,D.A.f2),pB=tonguePos(D.B.f1,D.B.f2);
+  s+=`<path d="${tonguePath(pA.tx,pA.ty)}" fill="none" stroke="#60a5fa" stroke-width="2" stroke-opacity="0.85"/>`;
+  s+=`<path d="${tonguePath(pB.tx,pB.ty)}" fill="none" stroke="#fb923c" stroke-width="2" stroke-opacity="0.85"/>`;
+  // labios (redondeo A=azul, B=naranja indicado con texto)
+  const rA=roundIdx(D.A),rB=roundIdx(D.B);
+  s+=`<text x="40" y="178" font-size="8" fill="#60a5fa">A labios ${rA>0.45?'○ red.':'— est.'}</text>`;
+  s+=`<text x="40" y="190" font-size="8" fill="#fb923c">B labios ${rB>0.45?'○ red.':'— est.'}</text>`;
+  document.getElementById('mouth').innerHTML=s;}
+
+// ════ envolvente ════
+function drawEnv(){const W=320,H=250,P={t:12,r:10,b:24,l:28},PW=W-P.l-P.r,PH=H-P.t-P.b,fmax=4500,dbMin=-46,dbMax=3;
+  const X=f=>P.l+f/fmax*PW,Y=db=>P.t+(dbMax-db)/(dbMax-dbMin)*PH;
+  let s=`<rect x="${P.l}" y="${P.t}" width="${PW}" height="${PH}" fill="#0a1525" rx="4"/>`;
+  [1000,2000,3000,4000].forEach(f=>{s+=`<line x1="${X(f)}" x2="${X(f)}" y1="${P.t}" y2="${P.t+PH}" stroke="#1c3250"/><text x="${X(f)}" y="${H-8}" text-anchor="middle" font-size="9" fill="#64748b">${f/1000}k</text>`;});
+  function cv(d,col){const e=envelope([d.f1,d.f2,d.f3]);let p='';for(let n=0;n<e.freqs.length;n++){if(e.freqs[n]>fmax)break;p+=`${X(e.freqs[n]).toFixed(1)},${Y(e.db[n]).toFixed(1)} `;}return `<polyline points="${p}" fill="none" stroke="${col}" stroke-width="2.2"/>`;}
+  s+=cv(D.A,'#60a5fa')+cv(D.B,'#fb923c');document.getElementById('env').innerHTML=s;}
+
+// ════ trayectoria F2 ════
+function drawTraj(){const W=640,H=180,P={t:14,r:14,b:26,l:40},PW=W-P.l-P.r,PH=H-P.t-P.b;
+  const all=[...D.A.traj,...D.B.traj];if(!all.length){document.getElementById('traj').innerHTML='';return;}
+  const f2s=all.map(p=>p.f2),fmin=Math.min(...f2s)-150,fmax=Math.max(...f2s)+150;
+  let s=`<rect x="${P.l}" y="${P.t}" width="${PW}" height="${PH}" fill="#0a1525" rx="4"/>`;
+  [1000,1500,2000,2500].filter(f=>f>=fmin&&f<=fmax).forEach(f=>{const y=P.t+(fmax-f)/(fmax-fmin)*PH;s+=`<line x1="${P.l}" x2="${P.l+PW}" y1="${y}" y2="${y}" stroke="#1c3250"/><text x="${P.l-4}" y="${y}" text-anchor="end" dominant-baseline="middle" font-size="8" fill="#64748b">${f}</text>`;});
+  function line(traj,col){if(traj.length<2)return '';const n=traj.length;let p='';traj.forEach((pt,i)=>{const x=P.l+i/(n-1)*PW,y=P.t+(fmax-pt.f2)/(fmax-fmin)*PH;p+=`${x.toFixed(1)},${y.toFixed(1)} `;});return `<polyline points="${p}" fill="none" stroke="${col}" stroke-width="2.4"/>`;}
+  s+=line(D.A.traj,'#60a5fa')+line(D.B.traj,'#fb923c');
+  s+=`<text x="${P.l}" y="${H-8}" font-size="9" fill="#64748b">inicio de la vocal → fin</text>`;
+  s+=`<text x="6" y="${P.t+PH/2}" font-size="9" fill="#64748b" transform="rotate(-90 6 ${P.t+PH/2})">F2 (Hz)</text>`;
+  document.getElementById('traj').innerHTML=s;}
+
+// ════ espectrograma ════
+const STOPS=[[0,0,4],[40,11,84],[101,21,110],[159,42,99],[212,72,66],[245,125,21],[250,193,39],[252,255,164]];
+function ramp(t){t=Math.max(0,Math.min(1,t));const x=t*(STOPS.length-1),i=Math.floor(x),f=x-i,a=STOPS[i],b=STOPS[Math.min(i+1,STOPS.length-1)];return [a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f];}
+function drawSpec(slot,id){const d=D[slot],s=d.samples,fs=d.sampleRate,N=1024,hop=256,fmax=5000,maxBin=Math.floor(fmax/fs*N);
+  const hann=new Float32Array(N);for(let i=0;i<N;i++)hann[i]=0.5-0.5*Math.cos(2*Math.PI*i/(N-1));const frames=[];
+  for(let st=0;st+N<=s.length;st+=hop){const re=new Float64Array(N),im=new Float64Array(N);for(let i=0;i<N;i++)re[i]=s[st+i]*hann[i];fft(re,im);const col=new Float32Array(maxBin);for(let b=0;b<maxBin;b++)col[b]=20*Math.log10(Math.hypot(re[b],im[b])+1e-9);frames.push(col);}
+  const cols=frames.length;if(!cols)return;let mx=-1e9;for(const c of frames)for(const v of c)if(v>mx)mx=v;const fl=mx-58;
+  const cv=document.getElementById(id);cv.width=cols;cv.height=maxBin;const c=cv.getContext('2d'),img=c.createImageData(cols,maxBin);
+  for(let x=0;x<cols;x++)for(let y=0;y<maxBin;y++){const v=(frames[x][y]-fl)/(mx-fl),[R,G,B]=ramp(v),py=maxBin-1-y,o=(py*cols+x)*4;img.data[o]=R;img.data[o+1]=G;img.data[o+2]=B;img.data[o+3]=255;}
+  c.putImageData(img,0,0);const c0=Math.floor(d.vStart/hop),c1=Math.floor(d.vEnd/hop);c.strokeStyle='rgba(52,211,153,0.9)';c.lineWidth=Math.max(1,cols/300);c.strokeRect(c0,0,Math.max(2,c1-c0),maxBin);}
+
+// ════ comparación ════
+function factorBar(label,va,vb,lo,hi,endLo,endHi,inv){
+  const pa=clamp((va-lo)/(hi-lo),0,1)*100,pb=clamp((vb-lo)/(hi-lo),0,1)*100;
+  const xa=inv?100-pa:pa,xb=inv?100-pb:pb;
+  return `<div class="factor"><div class="factor-label">${label}</div><div><div class="factor-bar"><div class="fa" style="left:${xa}%"></div><div class="fb" style="left:${xb}%"></div></div><div class="factor-ends"><span>${endLo}</span><span>${endHi}</span></div></div></div>`;}
+function runCompare(){
+  document.getElementById('legA').textContent='A · '+document.getElementById('wordA').textContent;
+  document.getElementById('legB').textContent='B · '+document.getElementById('wordB').textContent;
+  document.getElementById('slA').textContent=document.getElementById('wordA').textContent;
+  document.getElementById('slB').textContent=document.getElementById('wordB').textContent;
+  const A=D.A,B=D.B;
+  // factores
+  let f='';
+  f+=factorBar('Altura lengua (F1)',A.f1,B.f1,250,1050,'alta/cerrada','baja/abierta',true);
+  f+=factorBar('Frente-atrás (F2)',A.f2,B.f2,700,2800,'atrás','adelante');
+  f+=factorBar('Duración',A.dur*1000,B.dur*1000,40,Math.max(300,A.dur*1000,B.dur*1000),'breve','larga');
+  if(A.f3&&B.f3)f+=factorBar('Labios/timbre (F3)',A.f3,B.f3,2200,3200,'redondeada','estirada');
+  document.getElementById('factors').innerHTML=f;
+  // veredicto
+  const dB1=Math.abs(bark(A.f1)-bark(B.f1)),dB2=Math.abs(bark(A.f2)-bark(B.f2)),dDur=Math.abs(A.dur-B.dur)*1000;
+  const dist=Math.hypot(dB1,dB2);
+  let main='';const cands=[['la altura de la lengua',dB1],['la posición adelante/atrás de la lengua',dB2*1.0],['la duración',dDur/120]];
+  cands.sort((a,b)=>b[1]-a[1]);main=cands[0][0];
+  let vText,vCol,vBg,ic;
+  if(dist<1.0&&dDur<60){vText='Casi idénticas acústicamente — con razón cuesta distinguirlas';vCol='#f87171';vBg='#f8717118';ic='✕';}
+  else if(dist<2){vText='Diferencia moderada — la principal es '+main;vCol='#fbbf24';vBg='#fbbf2418';ic='~';}
+  else{vText='Claramente distintas — sobre todo en '+main;vCol='#34d399';vBg='#34d39918';ic='✓';}
+  const vd=document.getElementById('verdict');vd.style.background=vBg;vd.style.color=vCol;vd.innerHTML=`<span style="font-size:20px">${ic}</span> ${vText}`;
+  drawMouth();drawEnv();drawTraj();drawSpec('A','specA');drawSpec('B','specB');onMorph();
+  document.getElementById('analysis').classList.add('show');document.getElementById('initNote').style.display='none';
+}
+
+// drag & drop sobre las cards
+['A','B'].forEach(slot=>{const card=document.querySelector('.card.'+slot);
+  card.addEventListener('dragover',e=>{e.preventDefault();});
+  card.addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])loadFile(slot,e.dataTransfer.files[0]);});});
+</script>
+</body>
+</html>
